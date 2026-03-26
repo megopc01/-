@@ -54,7 +54,7 @@ jobs:
           SITES_CONFIG = [
               {"name": "ReelShort", "url": "https://www.reelshort.com/ar", "base": "https://www.reelshort.com"},
               {"name": "DramaBox", "url": "https://www.dramabox.com/ar", "base": "https://www.dramabox.com"},
-              {"name": "GoodShort", "url": "https://www.goodshort.com/ar", "base": "https://www.goodshort.com"},
+              
               {"name": "FlexTV", "url": "https://flextv.cc/ar", "base": "https://flextv.cc"},
               {"name": "ShortTV", "url": "https://www.shorttv.live/ar", "base": "https://www.shorttv.live"}
           ]
