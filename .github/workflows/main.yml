@@ -60,7 +60,7 @@ jobs:
                               if len(parts) == 2:
                                   history[parts[0]] = parts[1]
 
-              base = "https://www.reelshort.com/ar"
+              base = "https://www.reelshort.com"
               try:
                   r = requests.get(f"{base}/ar", headers={"User-Agent": "Mozilla/5.0"}, verify=False, timeout=10)
                   soup = BeautifulSoup(r.text, 'html.parser')
