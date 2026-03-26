@@ -34,11 +34,13 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           BLOGGER_ID: ${{ secrets.BLOGGER_ID }}
+          # هذا السطر مهم جداً لعرض المخرجات فوراً في GitHub Actions
+          PYTHONUNBUFFERED: 1
         run: |
           pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 -q
           
           cat << 'EOF' > blogger_script.py
-          import os, asyncio, re, requests, time, json, random, urllib3
+          import os, asyncio, re, requests, time, json, random, urllib3, sys
           from datetime import datetime, timedelta
           from bs4 import BeautifulSoup
           from google.oauth2 import service_account
@@ -52,6 +54,7 @@ jobs:
 
           # --- دالة جلب البيانات مع فحص التاريخ (3 أيام) ---
           def get_new_show():
+              print("🔍 جاري البحث عن مسلسلات جديدة...", flush=True)
               history = {}
               if os.path.exists(HISTORY_FILE):
                   with open(HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -89,12 +92,18 @@ jobs:
                       meta = s_soup.find('meta', attrs={'name': 'description'})
                       desc = meta.get('content', '') if meta else "قصة درامية"
 
+                      print(f"🎯 تم العثور على: {title}", flush=True)
                       return {"title": title, "desc": desc, "image": i_url}
-              except: return None
+              except Exception as e: 
+                  print(f"⚠️ خطأ في البحث: {e}", flush=True)
+                  return None
+              
+              print("🤷‍♂️ لم أجد مسلسلات جديدة لتوليدها.", flush=True)
               return None
 
           # --- دالة توليد محتوى SEO احترافي ---
           def generate_seo_content(title, original_desc):
+              print(f"🤖 جاري كتابة المقال بالذكاء الاصطناعي لمسلسل '{title}'... (قد يستغرق بعض الوقت)", flush=True)
               prompt = (f"اكتب مقالاً احترافياً لمدونة بلوجر عن مسلسل بعنوان '{title}'. "
                         f"الوصف الأساسي: {original_desc}. "
                         f"يجب أن يلتزم المقال بمعايير SEO: "
@@ -109,12 +118,15 @@ jobs:
                       model=g4f.models.gpt_4,
                       messages=[{"role": "user", "content": prompt}]
                   )
+                  print("✅ تمت كتابة المقال بنجاح!", flush=True)
                   return response
-              except:
+              except Exception as e:
+                  print(f"⚠️ فشل الذكاء الاصطناعي: {e}", flush=True)
                   return f"<h2>قصة مسلسل {title}</h2><p>{original_desc}</p>"
 
           # --- دالة النشر على بلوجر ---
           def post_to_blogger(title, content, image_url):
+              print("📤 جاري النشر على مدونة بلوجر...", flush=True)
               try:
                   creds_data = json.loads(os.environ['GOOGLE_CREDENTIALS'])
                   
@@ -138,24 +150,26 @@ jobs:
                   posts = service.posts()
                   request = posts.insert(blogId=blogger_id, body=body)
                   result = request.execute()
-                  print(f"✅ تم نشر التدوينة بنجاح: {result['url']}")
+                  print(f"✅ تم نشر التدوينة بنجاح: {result['url']}", flush=True)
                   return True
               except Exception as e:
-                  print(f"❌ خطأ أثناء النشر: {e}")
+                  print(f"❌ خطأ أثناء النشر: {e}", flush=True)
                   return False
 
           # --- الحلقة الرئيسية ---
+          print("\n" + "="*50)
           print("🚀 بدء نظام النشر التلقائي (Blogger SEO Dual)...")
+          print("="*50 + "\n", flush=True)
           start_time = time.time()
           
           while True:
-              # التوقف بعد 5 ساعات لإعادة تشغيل الأكشن (GitHub limit)
-              if time.time() - start_time > 18000: 
+              # التوقف بعد 4.5 ساعات لإعادة تشغيل الأكشن بأمان (GitHub limit is 6h)
+              if time.time() - start_time > 16200: 
+                  print("⏳ اكتمل وقت الجلسة الحالية، سيتم إعادة التشغيل لضمان الاستمرارية.", flush=True)
                   break
 
               show = get_new_show()
               if show:
-                  print(f"🔍 معالجة: {show['title']}")
                   seo_article = generate_seo_content(show['title'], show['desc'])
                   
                   if post_to_blogger(show['title'], seo_article, show['image']):
@@ -163,12 +177,13 @@ jobs:
                       with open(HISTORY_FILE, "a", encoding="utf-8") as f:
                           f.write(f"{show['title']}|{datetime.now().strftime('%Y-%m-%d')}\n")
                       
-                      print("⏳ انتظار 60 ثانية قبل التدوينة التالية...")
+                      print("⏳ انتظار 60 ثانية قبل البحث عن التدوينة التالية...\n", flush=True)
                       time.sleep(60)
                   else:
+                      print("⏳ محاولة أخرى بعد 30 ثانية بسبب فشل النشر...\n", flush=True)
                       time.sleep(30)
               else:
-                  print("😴 لم يتم العثور على مسلسلات جديدة حالياً، انتظار 5 دقائق...")
+                  print("😴 انتظار 5 دقائق للبحث مرة أخرى...\n", flush=True)
                   time.sleep(300)
           EOF
           python blogger_script.py
@@ -185,4 +200,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "🔄 جاري إعادة تشغيل الأكشن للاستمرار..."
           gh workflow run "Blogger Perpetual SEO Poster" --ref ${{ github.ref_name }}
