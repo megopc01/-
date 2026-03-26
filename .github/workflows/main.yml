@@ -60,7 +60,7 @@ jobs:
                               if len(parts) == 2:
                                   history[parts[0]] = parts[1]
 
-              base = "https://www.shorttv.live"
+              base = "https://www.reelshort.com/ar"
               try:
                   r = requests.get(f"{base}/ar", headers={"User-Agent": "Mozilla/5.0"}, verify=False, timeout=10)
                   soup = BeautifulSoup(r.text, 'html.parser')
@@ -139,9 +139,9 @@ jobs:
 
                   body = {
                       "kind": "blogger#post",
-                      "title": f"تفاصيل وقصة مسلسل {title} كاملة - مراجعة شاملة",
+                      "title": f"ملخص وقصة مسلسل {title} كاملة ومدبلج بالعربي - مراجعة شاملة",
                       "content": full_content,
-                      "labels": ["مسلسلات", "قصص مسلسلات", title]
+                      "labels": ["ملخصات", "قصص مسلسلات", title]
                   }
 
                   posts = service.posts()
@@ -172,7 +172,7 @@ jobs:
                           f.write(f"{show['title']}|{datetime.now().strftime('%Y-%m-%d')}\n")
                       
                       print("⏳ انتظار 60 ثانية قبل البحث عن التدوينة التالية...\n", flush=True)
-                      time.sleep(60)
+                      time.sleep(3000)
                   else:
                       print("⏳ محاولة أخرى بعد 30 ثانية بسبب فشل النشر...\n", flush=True)
                       time.sleep(30)
