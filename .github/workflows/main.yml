@@ -220,7 +220,7 @@ jobs:
               print("📤 جاري النشر على Dev.to...", flush=True)
               
               # إضافة رابط بلوجر في بداية المقال
-              body = f"### 🔗 **لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا : **\n{blogger_url}\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
+              body = f"### 🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا \n 👇👇👇👇👇👇👇👇👇 \n[اضغط هنا لمشاهدة المقال الأصلي]({blogger_url})\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
               
               data = {
                   "article": {
@@ -251,7 +251,8 @@ jobs:
               headers = {"Authorization": token, "Content-Type": "application/json"}
               
               try:
-                  body = f"### 🔗 **لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا : **\n{blogger_url}\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
+                  # جعل الرابط قابل للنقر باستخدام وسوم HTML
+                  body = f"<h3>🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا </h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>اضغط هنا لمشاهدة المقال الأصلي</a></h3><br><img src='{image_url}' alt='{title}' /><br><br>{content}"
                   
                   mutation = """
                   mutation PublishPost($input: PublishPostInput!) {
