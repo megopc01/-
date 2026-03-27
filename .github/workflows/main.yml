@@ -36,6 +36,8 @@ jobs:
           BLOGGER_ID: ${{ secrets.BLOGGER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_TOKEN: ${{ secrets.HASHNODE_TOKEN }}
           PYTHONUNBUFFERED: 1
         run: |
           pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 -q
@@ -153,13 +155,13 @@ jobs:
 
           def generate_seo_content(title, original_desc):
               print(f"🤖 جاري كتابة المقال بالذكاء الاصطناعي لمسلسل '{title}'...", flush=True)
-              prompt = (f"اكتب مقالاً احترافياً لمدونة بلوجر عن مسلسل بعنوان '{title}'. "
+              prompt = (f"اكتب مقالاً احترافياً ومتوافقاً جداً مع السيو (SEO) لمدونة بلوجر عن مسلسل بعنوان '{title}'. "
                         f"الوصف الأساسي: {original_desc}. "
-                        f"يجب أن يلتزم المقال بمعايير SEO: "
-                        f"1. استخدم لغة عربية فصحى جذابة. "
-                        f"2. المقال يجب أن يحتوي على مقدمة، قصة المسلسل بالتفصيل، قائمة بأهم الشخصيات، مراجعة نقدية، وخاتمة. "
-                        f"3. استخدم وسوم HTML مثل <h2> و <h3> و <p> و <strong>. "
-                        f"4. اجعل طول المقال لا يقل عن 800 كلمة. "
+                        f"يجب أن يلتزم المقال بالمعايير التالية: "
+                        f"1. استخدم لغة عربية فصحى جذابة ومفهومة. "
+                        f"2. المقال يجب أن يحتوي على مقدمة مشوقة، قصة المسلسل بالتفصيل، قائمة بأهم الشخصيات وأدوارهم، مراجعة نقدية، وخاتمة قوية. "
+                        f"3. استخدم وسوم HTML مثل <h2> و <h3> و <p> و <strong> لتنسيق الفقرات. "
+                        f"4. هام جداً: اجعل طول المقال مفصلاً ومتوسطه حوالي 1500 كلمة لضمان تصدر نتائج البحث. "
                         f"5. لا تذكر روابط خارجية. فقط نص المقال بتنسيق HTML.")
               
               try:
@@ -204,10 +206,99 @@ jobs:
                   request = posts.insert(blogId=blogger_id, body=body)
                   result = request.execute()
                   print(f"✅ تم نشر التدوينة بنجاح: {result['url']}", flush=True)
-                  return True
+                  return result['url'] # إرجاع رابط التدوينة
               except Exception as e:
                   print(f"❌ خطأ أثناء النشر: {e}", flush=True)
-                  return False
+                  return None
+
+          def post_to_devto(title, content, image_url, blogger_url):
+              api_key = os.environ.get('DEVTO_API_KEY')
+              if not api_key:
+                  print("⚠️ تخطي النشر على Dev.to: المفتاح مفقود في الأسرار.", flush=True)
+                  return
+              print("📤 جاري النشر على Dev.to...", flush=True)
+              
+              # إضافة رابط بلوجر في بداية المقال
+              body = f"### 🔗 **لقراءة المقال الأصلي على مدونتنا:** [اضغط هنا للقراءة]({blogger_url})\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
+              
+              data = {
+                  "article": {
+                      "title": f"قصة ومراجعة مسلسل {title} كاملة",
+                      "published": True,
+                      "body_markdown": body,
+                      "tags": ["drama", "review", "series"]
+                  }
+              }
+              try:
+                  r = requests.post("https://dev.to/api/articles", headers={"api-key": api_key}, json=data)
+                  if r.status_code == 201:
+                      print(f"✅ تم النشر على Dev.to: {r.json().get('url')}", flush=True)
+                  else:
+                      print(f"❌ خطأ Dev.to: {r.text}", flush=True)
+              except Exception as e:
+                  print(f"❌ خطأ في اتصال Dev.to: {e}", flush=True)
+
+          def post_to_hashnode(title, content, image_url, blogger_url):
+              token = os.environ.get('HASHNODE_TOKEN')
+              if not token:
+                  print("⚠️ تخطي النشر على Hashnode: التوكن مفقود في الأسرار.", flush=True)
+                  return
+              print("📤 جاري النشر على Hashnode...", flush=True)
+              headers = {"Authorization": token, "Content-Type": "application/json"}
+              
+              try:
+                  query = """
+                  query {
+                    me {
+                      publications(first: 1) {
+                        edges {
+                          node {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                  """
+                  res = requests.post("https://gql.hashnode.com/", json={"query": query}, headers=headers).json()
+                  
+                  pub_id = None
+                  try:
+                      pub_id = res['data']['me']['publications']['edges'][0]['node']['id']
+                  except:
+                      pass
+
+                  # إضافة رابط بلوجر في بداية المقال بتنسيق HTML متوافق
+                  body = f"<h3>🔗 <strong>لقراءة المقال الأصلي على مدونتنا:</strong> <a href='{blogger_url}'>اضغط هنا للقراءة</a></h3><br><img src='{image_url}' alt='{title}' /><br><br>{content}"
+                  
+                  if pub_id:
+                      mutation = """
+                      mutation PublishPost($input: PublishPostInput!) {
+                        publishPost(input: $input) {
+                          post {
+                            url
+                          }
+                        }
+                      }
+                      """
+                      variables = {
+                          "input": {
+                              "title": f"قصة ومراجعة مسلسل {title} كاملة",
+                              "publicationId": pub_id,
+                              "contentMarkdown": body
+                          }
+                      }
+                      publish_res = requests.post("https://gql.hashnode.com/", json={"query": mutation, "variables": variables}, headers=headers).json()
+                      
+                      if "errors" in publish_res:
+                          print(f"❌ خطأ Hashnode: {publish_res['errors']}", flush=True)
+                      else:
+                          print(f"✅ تم النشر على Hashnode: {publish_res['data']['publishPost']['post']['url']}", flush=True)
+                  else:
+                      print("⚠️ خطأ Hashnode: لم نتمكن من العثور على publicationId الخاص بحسابك.", flush=True)
+                      
+              except Exception as e:
+                  print(f"❌ خطأ في اتصال Hashnode: {e}", flush=True)
 
           def create_telegraph_account():
               try:
@@ -262,7 +353,6 @@ jobs:
               url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
               
               try:
-                  # محاولة جلب الصورة كبيانات للهروب من حظر تليجرام للروابط
                   headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
                   img_response = requests.get(image_url, headers=headers, timeout=15)
                   
@@ -271,7 +361,6 @@ jobs:
                       payload = {"chat_id": chat_id, "caption": caption}
                       r = requests.post(url, data=payload, files=files)
                   else:
-                      # إذا فشل تحميل الصورة، يتم إرسال رسالة نصية كبديل لتجنب تعطل الكود
                       msg_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                       payload = {"chat_id": chat_id, "text": f"{caption}\n\n🖼️ {image_url}", "disable_web_page_preview": False}
                       r = requests.post(msg_url, data=payload)
@@ -298,10 +387,15 @@ jobs:
               if show:
                   seo_article = generate_seo_content(show['title'], show['desc'])
                   
-                  if post_to_blogger(show['title'], seo_article, show['image']):
-                      # النشر على تليجراف وتليجرام بعد بلوجر
+                  blogger_url = post_to_blogger(show['title'], seo_article, show['image'])
+                  if blogger_url:
+                      # النشر على تليجراف وتليجرام
                       t_url = post_to_telegraph(show['title'], show['desc'], show['image'], telegraph_token)
                       post_to_telegram(show['title'], show['desc'], show['image'], t_url)
+                      
+                      # النشر على Dev.to و Hashnode مع إرفاق الرابط الأساسي للمدونة
+                      post_to_devto(show['title'], seo_article, show['image'], blogger_url)
+                      post_to_hashnode(show['title'], seo_article, show['image'], blogger_url)
 
                       with open(HISTORY_FILE, "a", encoding="utf-8") as f:
                           f.write(f"{show['title']}|{datetime.now().strftime('%Y-%m-%d')}\n")
