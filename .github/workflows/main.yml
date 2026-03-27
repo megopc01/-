@@ -195,7 +195,7 @@ jobs:
 
                   body = {
                       "kind": "blogger#post",
-                      "title": f"ملخص وقصة مسلسل {title} كاملة ومدبلج بالعربي - مراجعة شاملة",
+                      "title": f"ملخص وقصة مسلسل {title} - مراجعة شاملة",
                       "content": full_content,
                       "labels": ["ملخصات", "قصص مسلسلات", title]
                   }
@@ -223,7 +223,7 @@ jobs:
               content = [
                   {"tag": "img", "attrs": {"src": image_url}},
                   {"tag": "br"},
-                  {"tag": "h3", "children": ["شاهد المسلسل كامل من هنا : 👈 ", {"tag": "a", "attrs": {"href": "https://tubes.odoo.com/?off1=Telegraph_RED"}, "children": ["https://tubes.odoo.com/?off1=TelegramMpFB"]}]},
+                  {"tag": "h3", "children": ["شاهد المسلسل كامل من هنا : 👈 ", {"tag": "a", "attrs": {"href": "https://tubes.odoo.com/?off1=Telegraph_RED"}, "children": ["https://tubes.odoo.com/?off1=Telegraph_RED"]}]},
                   {"tag": "br"},
                   {"tag": "p", "children": [desc]}
               ]
