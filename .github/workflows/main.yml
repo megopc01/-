@@ -171,6 +171,7 @@ jobs:
                       messages=[{"role": "user", "content": prompt}]
                   )
                   # تنظيف المخرجات من رموز Markdown المزعجة
+                  clean_response = re.sub(r'<!DOCTYPE.*?>|<html>|</html>|<head>.*?</head>|<body>|</body>', '', response, flags=re.DOTALL | re.IGNORECASE)
                   clean_response = response.replace("```html", "").replace("```", "").strip()
                   print("✅ تمت كتابة المقال بنجاح!", flush=True)
                   return clean_response
@@ -220,7 +221,7 @@ jobs:
               print("📤 جاري النشر على Dev.to...", flush=True)
               
               # إضافة رابط بلوجر في بداية المقال
-              body = f"### 🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا \n 👇👇👇👇👇👇👇👇👇 \n[اضغط هنا لمشاهدة المقال الأصلي]({blogger_url})\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
+              body = f"### 🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا \n 👇👇👇👇👇👇👇👇👇 \n[{blogger_url}]({blogger_url})\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
               
               data = {
                   "article": {
@@ -252,7 +253,7 @@ jobs:
               
               try:
                   # جعل الرابط قابل للنقر باستخدام وسوم HTML
-                  body = f"<h3>🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا </h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>اضغط هنا لمشاهدة المقال الأصلي</a></h3><br><img src='{image_url}' alt='{title}' /><br><br>{content}"
+                  body = f"<h3>🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا </h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>{blogger_url}</a></h3><br><img src='{image_url}' alt='{title}' /><br><br>{content}"
                   
                   mutation = """
                   mutation PublishPost($input: PublishPostInput!) {
