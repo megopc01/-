@@ -220,7 +220,7 @@ jobs:
               content = [
                   {"tag": "img", "attrs": {"src": image_url}},
                   {"tag": "br"},
-                  {"tag": "h3", "children": ["شاهد السمسلسل كامل من هنا : ", {"tag": "a", "attrs": {"href": "https://tubes.odoo.com/?off1=TelegramMpFB"}, "children": ["https://tubes.odoo.com/?off1=TelegramMpFB"]}]},
+                  {"tag": "h3", "children": ["شاهد المسلسل كامل من هنا : ", {"tag": "a", "attrs": {"href": "https://tubes.odoo.com/?off1=TelegramMpFB"}, "children": ["https://tubes.odoo.com/?off1=TelegramMpFB"]}]},
                   {"tag": "br"},
                   {"tag": "p", "children": [desc]}
               ]
@@ -251,18 +251,27 @@ jobs:
                   return
 
               print("📤 جاري النشر على Telegram...", flush=True)
-              caption = f"🎬 {title}\n\nشاهد السمسلسل كامل من هنا : https://tubes.odoo.com/?off1=TelegramMpFB\n\n📝 {desc}"
+              caption = f"🎬 {title}\n\nشاهد المسلسل كامل من هنا : https://tubes.odoo.com/?off1=TelegramMpFB\n\n📝 {desc}"
               if telegraph_url:
                   caption += f"\n\n🔗 اقرأ الملخص: {telegraph_url}"
 
               url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-              payload = {
-                  "chat_id": chat_id,
-                  "photo": image_url,
-                  "caption": caption
-              }
+              
               try:
-                  r = requests.post(url, data=payload)
+                  # محاولة جلب الصورة كبيانات للهروب من حظر تليجرام للروابط
+                  headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                  img_response = requests.get(image_url, headers=headers, timeout=15)
+                  
+                  if img_response.status_code == 200:
+                      files = {'photo': ('poster.jpg', img_response.content)}
+                      payload = {"chat_id": chat_id, "caption": caption}
+                      r = requests.post(url, data=payload, files=files)
+                  else:
+                      # إذا فشل تحميل الصورة، يتم إرسال رسالة نصية كبديل لتجنب تعطل الكود
+                      msg_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                      payload = {"chat_id": chat_id, "text": f"{caption}\n\n🖼️ {image_url}", "disable_web_page_preview": False}
+                      r = requests.post(msg_url, data=payload)
+
                   if r.status_code == 200:
                       print("✅ تم النشر على تليجرام بنجاح!", flush=True)
                   else:
