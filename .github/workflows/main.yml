@@ -251,8 +251,7 @@ jobs:
               headers = {"Authorization": token, "Content-Type": "application/json"}
               
               try:
-                  # إضافة رابط بلوجر في بداية المقال بتنسيق HTML متوافق
-                 body = f"### 🔗 **لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا : **\n{blogger_url}\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
+                  body = f"### 🔗 **لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا : **\n{blogger_url}\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
                   
                   mutation = """
                   mutation PublishPost($input: PublishPostInput!) {
@@ -263,6 +262,7 @@ jobs:
                     }
                   }
                   """
+                  
                   variables = {
                       "input": {
                           "title": f"مسلسل {title} مدبلج بالعربي وكامل - جميع الأجزاء كاملة",
@@ -270,6 +270,7 @@ jobs:
                           "contentMarkdown": body
                       }
                   }
+                  
                   publish_res = requests.post("https://gql.hashnode.com/", json={"query": mutation, "variables": variables}, headers=headers).json()
                   
                   if "errors" in publish_res:
