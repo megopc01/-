@@ -39,9 +39,13 @@ jobs:
           DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
           HASHNODE_TOKEN: ${{ secrets.HASHNODE_TOKEN }}
           HASHNODE_PUB_ID: ${{ secrets.HASHNODE_PUB_ID }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
           PYTHONUNBUFFERED: 1
         run: |
-          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 -q
+          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 tweepy -q
           
           cat << 'EOF' > blogger_script.py
           import os, asyncio, re, requests, time, json, random, urllib3, sys
@@ -50,6 +54,7 @@ jobs:
           from google.oauth2.credentials import Credentials
           from googleapiclient.discovery import build
           import g4f
+          import tweepy
 
           urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
           HISTORY_FILE = "shows_history.txt"
@@ -283,6 +288,34 @@ jobs:
               except Exception as e:
                   print(f"❌ خطأ في اتصال Hashnode: {e}", flush=True)
 
+          def post_to_twitter(title, blogger_url):
+              api_key = os.environ.get('TWITTER_API_KEY')
+              api_secret = os.environ.get('TWITTER_API_SECRET')
+              access_token = os.environ.get('TWITTER_ACCESS_TOKEN')
+              access_secret = os.environ.get('TWITTER_ACCESS_SECRET')
+
+              if not all([api_key, api_secret, access_token, access_secret]):
+                  print("⚠️ تخطي النشر على تويتر: بيانات الاعتماد مفقودة في الأسرار.", flush=True)
+                  return
+
+              print("📤 جاري النشر على تويتر...", flush=True)
+              try:
+                  client = tweepy.Client(
+                      consumer_key=api_key, consumer_secret=api_secret,
+                      access_token=access_token, access_token_secret=access_secret
+                  )
+                  
+                  hashtag = re.sub(r'\W+', '_', title)
+                  tweet_text = f"🎬 مسلسل {title} مدبلج وكامل بالعربي\n\nشاهد المسلسل كامل من هنا 👇\n{blogger_url}\n\n#مسلسلات #{hashtag}"
+                  
+                  if len(tweet_text) > 280:
+                      tweet_text = tweet_text[:277] + "..."
+
+                  response = client.create_tweet(text=tweet_text)
+                  print(f"✅ تم النشر على تويتر بنجاح!", flush=True)
+              except Exception as e:
+                  print(f"❌ خطأ في اتصال تويتر: {e}", flush=True)
+
           def create_telegraph_account():
               try:
                   r = requests.get('https://api.telegra.ph/createAccount?short_name=AutoPoster&author_name=Admin')
@@ -372,6 +405,9 @@ jobs:
                   
                   blogger_url = post_to_blogger(show['title'], seo_article, show['image'])
                   if blogger_url:
+                      # النشر على تويتر
+                      post_to_twitter(show['title'], blogger_url)
+
                       # النشر على تليجراف وتليجرام
                       t_url = post_to_telegraph(show['title'], show['desc'], show['image'], telegraph_token)
                       post_to_telegram(show['title'], show['desc'], show['image'], t_url)
