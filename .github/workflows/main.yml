@@ -332,7 +332,7 @@ jobs:
                   clean_text = BeautifulSoup(seo_article, "html.parser").get_text(separator="\n", strip=True)
                   
                   # تجهيز الكابشن بالتنسيق المطلوب
-                  caption = f"🎬 مسلسل {title}\n\nشاهد المسلسل كاملاً من هنا : https://t.me/s/megodrFB\n\n📝 الملخص:\n{clean_text}"
+                  caption = f"شاهد المسلسل كاملاً من هنا : https://t.me/s/megodrFB\n\n 🎬 مسلسل {title}\n\n 📝 الملخص:\n{clean_text}"
 
                   # النشر على صفحة فيسبوك باستخدام Graph API بنقطة الاتصال الخاصة بالصور
                   graph_url = f"https://graph.facebook.com/v19.0/{fb_page_id}/photos"
