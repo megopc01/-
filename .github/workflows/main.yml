@@ -163,7 +163,7 @@ jobs:
                         f"الوصف الأساسي: {original_desc}. "
                         f"يجب أن يلتزم المقال بالمعايير التالية: "
                         f"1. استخدم لغة عربية فصحى جذابة ومفهومة. "
-                        f"2. المقال يجب أن يحتوي على مقدمة مشوقة، قصة المسلسل بالتفصيل، قائمة بأهم الشخصيات وأدوارهم، مراجعة نقدية، وخاتمة قوية. "
+                        f"2. المقال يجب أن يحتوي على مقدمة مشوقة، قصة المسلسل بالتفصيل، قائمة بأهم الشخصيات وأدوارهم، مراجعة، وخاتمة. "
                         f"3. استخدم وسوم HTML مثل <h2> و <h3> و <p> و <strong> لتنسيق الفقرات. "
                         f"4. هام جداً: اجعل طول المقال مفصلاً ومتوسطه حوالي 1500 كلمة لضمان تصدر نتائج البحث. "
                         f"5. لا تذكر روابط خارجية. فقط نص المقال بتنسيق HTML.")
@@ -234,7 +234,7 @@ jobs:
                   )
                   
                   hashtag = re.sub(r'\W+', '_', title)
-                  tweet_text = f"🎬 مسلسل {title} مدبلج وكامل بالعربي\n\nشاهد المسلسل كامل من هنا 👇\n{blogger_url}\n\n#مسلسلات #{hashtag}"
+                  tweet_text = f"🎬 مسلسل {title} مدبلج كامل بالعربي\n\nشاهد المسلسل كامل من هنا 👇\n{blogger_url}\n\n#مسلسلات #{hashtag}"
                   
                   if len(tweet_text) > 280:
                       tweet_text = tweet_text[:277] + "..."
@@ -250,7 +250,7 @@ jobs:
                   tgph = Telegraph()
                   tgph.create_account(short_name='AutoPoster', author_name='Admin')
                   
-                  formatted_title = f"مسلسل {title} مدبلج وكامل بالعربي"
+                  formatted_title = f"مسلسل {title} مدبلج كامل بالعربي"
                   
                   # تنظيف الـ HTML ليتوافق مع شروط تيليجراف الصارمة
                   soup_tg = BeautifulSoup(seo_article, 'html.parser')
@@ -289,7 +289,7 @@ jobs:
                   return
 
               print("📤 جاري النشر على Telegram...", flush=True)
-              formatted_title = f"مسلسل {title} مدبلج وكامل بالعربي"
+              formatted_title = f"مسلسل {title} مدبلج كامل بالعربي"
               caption = f"🎬 {formatted_title}\n\nشاهد المسلسل كامل من هنا 👇👇👇👇👇\n\n https://tubes.odoo.com/?off1=Telegram_RED\n\n📝 {desc}"
               if telegraph_url:
                   caption += f"\n\n"
