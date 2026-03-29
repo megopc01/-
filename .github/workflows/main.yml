@@ -40,9 +40,11 @@ jobs:
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           PYTHONUNBUFFERED: 1
         run: |
-          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 tweepy telegraph -q
+          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 tweepy telegraph Pillow -q
           
           cat << 'EOF' > blogger_script.py
           import os, asyncio, re, requests, time, json, random, urllib3, sys
@@ -316,6 +318,65 @@ jobs:
               except Exception as e:
                   print(f"❌ خطأ في اتصال تليجرام: {e}", flush=True)
 
+          def post_to_instagram(title, seo_article, image_url):
+              ig_user_id = os.environ.get('IG_USER_ID')
+              access_token = os.environ.get('IG_ACCESS_TOKEN')
+              
+              if not ig_user_id or not access_token:
+                  print("⚠️ تخطي النشر على انستجرام: بيانات الـ API مفقودة في الأسرار.", flush=True)
+                  return
+
+              print("📤 جاري النشر على Instagram عبر API...", flush=True)
+              try:
+                  # تنظيف مقال الـ SEO من وسوم HTML لتحويله لنص مقروء للانستجرام
+                  clean_text = BeautifulSoup(seo_article, "html.parser").get_text(separator="\n", strip=True)
+                  
+                  # تقليص النص لتجنب حظر انستجرام للنصوص الطويلة جداً
+                  if len(clean_text) > 1500:
+                      clean_text = clean_text[:1500] + "...\n(البقية في الرابط)"
+
+                  # تجهيز الكابشن بالتنسيق المطلوب
+                  caption = f"🎬 مسلسل {title}\n\nشاهد المسلسل كامل من هنا @megoodr\n\n📝 قصة المسلسل:\n{clean_text}\n\n@mohameda7.med حسابي دا كمساهم لكل منشور"
+
+                  # 1. إنشاء الحاوية (Container) للصورة عبر الـ Graph API
+                  graph_url = f"https://graph.facebook.com/v19.0/{ig_user_id}/media"
+                  payload = {
+                      'image_url': image_url,
+                      'caption': caption,
+                      'access_token': access_token
+                  }
+                  
+                  r = requests.post(graph_url, data=payload)
+                  res = r.json()
+                  
+                  if 'id' not in res:
+                      print(f"❌ خطأ أثناء إنشاء حاوية انستجرام: {res}", flush=True)
+                      return
+                      
+                  creation_id = res['id']
+                  print(f"⏳ تم إنشاء الحاوية ({creation_id})، جاري انتظار معالجة الصورة...", flush=True)
+                  
+                  # انتظار قليل حتى يتم معالجة الصورة في سيرفرات انستجرام
+                  time.sleep(10)
+                  
+                  # 2. نشر الحاوية (Publish Container)
+                  publish_url = f"https://graph.facebook.com/v19.0/{ig_user_id}/media_publish"
+                  publish_payload = {
+                      'creation_id': creation_id,
+                      'access_token': access_token
+                  }
+                  
+                  pub_r = requests.post(publish_url, data=publish_payload)
+                  pub_res = pub_r.json()
+                  
+                  if 'id' in pub_res:
+                      print(f"✅ تم النشر على انستجرام بنجاح! ID المنشور: {pub_res['id']}", flush=True)
+                  else:
+                      print(f"❌ فشل نشر الحاوية على انستجرام: {pub_res}", flush=True)
+                      
+              except Exception as e:
+                  print(f"❌ خطأ في اتصال انستجرام (API): {e}", flush=True)
+
           print("\n" + "="*50)
           print("🚀 بدء نظام النشر التلقائي (Blogger SEO Dual)...")
           print("="*50 + "\n", flush=True)
@@ -335,11 +396,14 @@ jobs:
                       # النشر على تويتر
                       post_to_twitter(show['title'], blogger_url)
 
-                      # النشر على تليجراف بالمقال الكامل واللينك
+                      # النشر على تليجراف
                       t_url = post_to_telegraph(show['title'], seo_article, show['image'], blogger_url)
                       
                       # النشر على تليجرام
                       post_to_telegram(show['title'], show['desc'], show['image'], t_url)
+                      
+                      # النشر على انستجرام (عبر الـ Graph API)
+                      post_to_instagram(show['title'], seo_article, show['image'])
                       
                       with open(HISTORY_FILE, "a", encoding="utf-8") as f:
                           f.write(f"{show['title']}|{datetime.now().strftime('%Y-%m-%d')}\n")
