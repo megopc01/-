@@ -36,16 +36,13 @@ jobs:
           BLOGGER_ID: ${{ secrets.BLOGGER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
-          HASHNODE_TOKEN: ${{ secrets.HASHNODE_TOKEN }}
-          HASHNODE_PUB_ID: ${{ secrets.HASHNODE_PUB_ID }}
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
           PYTHONUNBUFFERED: 1
         run: |
-          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 tweepy -q
+          pip install requests bs4 g4f google-api-python-client google-auth-httplib2 google-auth-oauthlib urllib3 tweepy telegraph -q
           
           cat << 'EOF' > blogger_script.py
           import os, asyncio, re, requests, time, json, random, urllib3, sys
@@ -55,6 +52,7 @@ jobs:
           from googleapiclient.discovery import build
           import g4f
           import tweepy
+          from telegraph import Telegraph
 
           urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
           HISTORY_FILE = "shows_history.txt"
@@ -218,76 +216,6 @@ jobs:
                   print(f"❌ خطأ أثناء النشر: {e}", flush=True)
                   return None
 
-          def post_to_devto(title, content, image_url, blogger_url):
-              api_key = os.environ.get('DEVTO_API_KEY')
-              if not api_key:
-                  print("⚠️ تخطي النشر على Dev.to: المفتاح مفقود في الأسرار.", flush=True)
-                  return
-              print("📤 جاري النشر على Dev.to...", flush=True)
-              
-              # إضافة رابط بلوجر في بداية المقال
-              body = f"### 🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا \n 👇👇👇👇👇👇👇👇👇 \n[{blogger_url}]({blogger_url})\n\n<img src='{image_url}' alt='{title}' />\n\n{content}"
-              
-              data = {
-                  "article": {
-                      "title": f"مسلسل {title} مدبلج بالعربي وكامل - جميع الأجزاء كاملة",
-                      "published": True,
-                      "body_markdown": body,
-                      "tags": []
-                  }
-              }
-              try:
-                  r = requests.post("https://dev.to/api/articles", headers={"api-key": api_key}, json=data)
-                  if r.status_code == 201:
-                      print(f"✅ تم النشر على Dev.to: {r.json().get('url')}", flush=True)
-                  else:
-                      print(f"❌ خطأ Dev.to: {r.text}", flush=True)
-              except Exception as e:
-                  print(f"❌ خطأ في اتصال Dev.to: {e}", flush=True)
-
-          def post_to_hashnode(title, content, image_url, blogger_url):
-              token = os.environ.get('HASHNODE_TOKEN')
-              pub_id = os.environ.get('HASHNODE_PUB_ID')
-              
-              if not token or not pub_id:
-                  print("⚠️ تخطي النشر على Hashnode: التوكن أو الـ ID مفقود في الأسرار.", flush=True)
-                  return
-                  
-              print("📤 جاري النشر على Hashnode...", flush=True)
-              headers = {"Authorization": token, "Content-Type": "application/json"}
-              
-              try:
-                  # جعل الرابط قابل للنقر باستخدام وسوم HTML
-                  body = f"<h3>🔗 لمشاهد المسلسل كامل ومبدلج بالعربي على موقعنا من هنا </h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>{blogger_url}</a></h3><br><img src='{image_url}' alt='{title}' /><br><br>{content}"
-                  
-                  mutation = """
-                  mutation PublishPost($input: PublishPostInput!) {
-                    publishPost(input: $input) {
-                      post {
-                        url
-                      }
-                    }
-                  }
-                  """
-                  
-                  variables = {
-                      "input": {
-                          "title": f"مسلسل {title} مدبلج بالعربي وكامل - جميع الأجزاء كاملة",
-                          "publicationId": pub_id,
-                          "contentMarkdown": body
-                      }
-                  }
-                  
-                  publish_res = requests.post("https://gql.hashnode.com/", json={"query": mutation, "variables": variables}, headers=headers).json()
-                  
-                  if "errors" in publish_res:
-                      print(f"❌ خطأ Hashnode: {publish_res['errors']}", flush=True)
-                  else:
-                      print(f"✅ تم النشر على Hashnode: {publish_res['data']['publishPost']['post']['url']}", flush=True)
-                      
-              except Exception as e:
-                  print(f"❌ خطأ في اتصال Hashnode: {e}", flush=True)
-
           def post_to_twitter(title, blogger_url):
               api_key = os.environ.get('TWITTER_API_KEY')
               api_secret = os.environ.get('TWITTER_API_SECRET')
@@ -316,39 +244,24 @@ jobs:
               except Exception as e:
                   print(f"❌ خطأ في اتصال تويتر: {e}", flush=True)
 
-          def create_telegraph_account():
-              try:
-                  r = requests.get('https://api.telegra.ph/createAccount?short_name=AutoPoster&author_name=Admin')
-                  return r.json()['result']['access_token']
-              except:
-                  return None
-
-          def post_to_telegraph(title, desc, image_url, token):
-              if not token: return None
+          def post_to_telegraph(title, seo_article, image_url, blogger_url):
               print("📤 جاري النشر على Telegraph...", flush=True)
-              formatted_title = f"مسلسل {title} مدبلج وكامل بالعربي"
-              content = [
-                  {"tag": "img", "attrs": {"src": image_url}},
-                  {"tag": "br"},
-                  {"tag": "h3", "children": ["شاهد المسلسل كامل من هنا : 👈 ", {"tag": "a", "attrs": {"href": "https://tubes.odoo.com/?off1=Telegraph_RED"}, "children": ["https://tubes.odoo.com/?off1=Telegraph_RED"]}]},
-                  {"tag": "br"},
-                  {"tag": "p", "children": [desc]}
-              ]
-              data = {
-                  'access_token': token,
-                  'title': formatted_title,
-                  'content': json.dumps(content),
-                  'return_content': 'false'
-              }
               try:
-                  r = requests.post('https://api.telegra.ph/createPage', data=data)
-                  res = r.json()
-                  if res['ok']:
-                      print(f"✅ تم النشر على تيليجراف: {res['result']['url']}", flush=True)
-                      return res['result']['url']
-                  else:
-                      print(f"❌ خطأ تيليجراف: {res.get('error')}", flush=True)
-                      return None
+                  tgph = Telegraph()
+                  tgph.create_account(short_name='AutoPoster', author_name='Admin')
+                  
+                  formatted_title = f"مسلسل {title} مدبلج وكامل بالعربي"
+                  
+                  # دمج رابط بلوجر في البداية مع صورة ومقال الـ SEO كامل
+                  full_html = f"<h3>🔗 لمشاهدة المسلسل كامل ومترجم على موقعنا من هنا:</h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>{blogger_url}</a></h3><br><img src='{image_url}'/><br><br>{seo_article}"
+                  
+                  response = tgph.create_page(
+                      formatted_title,
+                      html_content=full_html
+                  )
+                  url = f"https://telegra.ph/{response['path']}"
+                  print(f"✅ تم النشر على تيليجراف: {url}", flush=True)
+                  return url
               except Exception as e:
                   print(f"❌ خطأ في اتصال تيليجراف: {e}", flush=True)
                   return None
@@ -392,7 +305,6 @@ jobs:
           print("🚀 بدء نظام النشر التلقائي (Blogger SEO Dual)...")
           print("="*50 + "\n", flush=True)
           start_time = time.time()
-          telegraph_token = create_telegraph_account()
           
           while True:
               if time.time() - start_time > 16200: 
@@ -408,14 +320,12 @@ jobs:
                       # النشر على تويتر
                       post_to_twitter(show['title'], blogger_url)
 
-                      # النشر على تليجراف وتليجرام
-                      t_url = post_to_telegraph(show['title'], show['desc'], show['image'], telegraph_token)
+                      # النشر على تليجراف بالمقال الكامل واللينك
+                      t_url = post_to_telegraph(show['title'], seo_article, show['image'], blogger_url)
+                      
+                      # النشر على تليجرام
                       post_to_telegram(show['title'], show['desc'], show['image'], t_url)
                       
-                      # النشر على Dev.to و Hashnode مع إرفاق الرابط الأساسي للمدونة
-                      post_to_devto(show['title'], seo_article, show['image'], blogger_url)
-                      post_to_hashnode(show['title'], seo_article, show['image'], blogger_url)
-
                       with open(HISTORY_FILE, "a", encoding="utf-8") as f:
                           f.write(f"{show['title']}|{datetime.now().strftime('%Y-%m-%d')}\n")
                       
