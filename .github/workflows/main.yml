@@ -173,7 +173,7 @@ jobs:
                       model=g4f.models.gpt_4,
                       messages=[{"role": "user", "content": prompt}]
                   )
-                  # تنظيف المخرجات من رموز Markdown المزعجة
+                  # تنظيف مبدئي
                   clean_response = re.sub(r'<!DOCTYPE.*?>|<html>|</html>|<head>.*?</head>|<body>|</body>', '', response, flags=re.DOTALL | re.IGNORECASE)
                   clean_response = response.replace("```html", "").replace("```", "").strip()
                   print("✅ تمت كتابة المقال بنجاح!", flush=True)
@@ -211,7 +211,7 @@ jobs:
                   request = posts.insert(blogId=blogger_id, body=body)
                   result = request.execute()
                   print(f"✅ تم نشر التدوينة بنجاح: {result['url']}", flush=True)
-                  return result['url'] # إرجاع رابط التدوينة
+                  return result['url']
               except Exception as e:
                   print(f"❌ خطأ أثناء النشر: {e}", flush=True)
                   return None
@@ -252,8 +252,23 @@ jobs:
                   
                   formatted_title = f"مسلسل {title} مدبلج وكامل بالعربي"
                   
-                  # دمج رابط بلوجر في البداية مع صورة ومقال الـ SEO كامل
-                  full_html = f"<h3>🔗 لمشاهدة المسلسل كامل ومترجم على موقعنا من هنا:</h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>{blogger_url}</a></h3><br><img src='{image_url}'/><br><br>{seo_article}"
+                  # تنظيف الـ HTML ليتوافق مع شروط تيليجراف الصارمة
+                  soup_tg = BeautifulSoup(seo_article, 'html.parser')
+                  
+                  # تحويل العناوين غير المدعومة إلى عناوين مدعومة
+                  for tag in soup_tg.find_all(['h1', 'h2']): tag.name = 'h3'
+                  for tag in soup_tg.find_all(['h5', 'h6']): tag.name = 'h4'
+                  
+                  # إزالة الوسوم غير المدعومة مع الاحتفاظ بالنص الذي بداخلها
+                  allowed_tags = ['a', 'aside', 'b', 'blockquote', 'br', 'code', 'em', 'figcaption', 'figure', 'h3', 'h4', 'hr', 'i', 'iframe', 'img', 'li', 'ol', 'p', 'pre', 's', 'strong', 'u', 'ul', 'video']
+                  for tag in soup_tg.find_all(True):
+                      if tag.name not in allowed_tags:
+                          tag.unwrap() 
+                  
+                  clean_telegraph_html = str(soup_tg)
+                  
+                  # دمج رابط بلوجر في البداية مع صورة ومقال الـ SEO المفلتر
+                  full_html = f"<h3>🔗 لمشاهدة المسلسل كامل ومترجم على موقعنا من هنا:</h3><p>👇👇👇👇👇👇👇👇👇</p><h3><a href='{blogger_url}'>{blogger_url}</a></h3><br><img src='{image_url}'/><br><br>{clean_telegraph_html}"
                   
                   response = tgph.create_page(
                       formatted_title,
