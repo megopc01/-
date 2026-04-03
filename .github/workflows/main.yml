@@ -177,7 +177,7 @@ jobs:
                   )
                   # تنظيف مبدئي
                   clean_response = re.sub(r'<!DOCTYPE.*?>|<html>|</html>|<head>.*?</head>|<body>|</body>', '', response, flags=re.DOTALL | re.IGNORECASE)
-                  clean_response = response.replace("```html", "").replace("```", "").strip()
+                  clean_response = clean_response.replace("```html", "").replace("```", "").strip()
                   print("✅ تمت كتابة المقال بنجاح!", flush=True)
                   return clean_response
               except Exception as e:
@@ -200,12 +200,19 @@ jobs:
                   service = build('blogger', 'v3', credentials=creds)
                   blogger_id = os.environ['BLOGGER_ID']
 
+                  # استخراج وصف البحث (Search Description) من المحتوى لتحسين الأرشفة
+                  clean_text_for_desc = BeautifulSoup(content, "html.parser").get_text(separator=" ", strip=True)
+                  search_desc = clean_text_for_desc[:145] + "..." if len(clean_text_for_desc) > 145 else clean_text_for_desc
+
+                  # بناء المحتوى النهائي وإضافة الروابط الداخلية
                   full_content = f'<div style="text-align: center;"><img src="{image_url}" style="max-width: 100%; height: auto; border-radius: 10px;" /></div><br>' + content
+                  full_content += '<br><hr><br><h3 style="text-align: center;"><a href="https://proreed.blogspot.com">شاهد أيضاً ملخصات مسلسلات أخرى على موقعنا</a></h3>'
 
                   body = {
                       "kind": "blogger#post",
                       "title": f"ملخص وقصة مسلسل {title} - مراجعة شاملة",
                       "content": full_content,
+                      "customMetaData": search_desc,
                       "labels": ["ملخصات", "قصص مسلسلات", title]
                   }
 
